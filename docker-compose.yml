@@ -1,0 +1,27 @@
+services:
+  database:
+    container_name: database
+    image: postgres:${POSTGRES_VERSION:-18.6-alpine}
+    restart: always
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-bibliotech-password}
+      TZ: ${TZ:-America/La_Paz}
+    volumes:
+      - database_data:/var/lib/postgresql/data
+
+  bibliotech-backend:
+    container_name: bibliotech-backend
+    build:
+      context: .
+      no_cache: true
+    image: bibliotech-backend
+    restart: always
+    ports:
+      - '${PORT:-3000}:${PORT:-3000}'
+    depends_on:
+      - database
+
+volumes:
+  database_data:
