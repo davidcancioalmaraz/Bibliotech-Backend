@@ -4,18 +4,12 @@ Backend for a library management system for books and loans.
 
 # Installing
 
-## Docker
+## Docker Compose
 
-- Build docker image
-
-    ```shell
-    docker build -t biblitech-backend --no-cache .
-    ```
-
-- Run docker container
+- Up Project
 
     ```shell
-    docker run -d --restart always -p 3000:3000 --name biblitech-backend biblitech-backend
+    docker compose up -d
     ```
 
 ## Node
