@@ -1,7 +1,7 @@
 import type { DataSource } from 'typeorm'
 import type { Seeder, SeederFactoryManager } from 'typeorm-extension'
 
-import { Book } from '../../book/entities/book.entity.js'
+import { Book } from '../../book/entities/index.ts'
 
 const DEFAULT_BOOK_COUNT = 25
 
