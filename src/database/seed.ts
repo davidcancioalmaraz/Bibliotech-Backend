@@ -1,7 +1,7 @@
 import { DataSource } from 'typeorm'
 import { runSeeders } from 'typeorm-extension'
 
-import { Book } from '../book/entities/book.entity.js'
+import { Book } from '../book/entities/index.ts'
 import { dataSourceOptions } from './data-source.js'
 import { bookFactory } from './seeds/book.factory.js'
 import { faker } from './seeds/faker.js'
