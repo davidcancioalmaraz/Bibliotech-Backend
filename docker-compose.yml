@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-bibliotech-password}
       TZ: ${TZ:-America/La_Paz}
     volumes:
-      - database_data:/var/lib/postgresql/data
+      - database_data:/var/lib/postgresql
 
   bibliotech-backend:
     container_name: bibliotech-backend
@@ -19,7 +19,7 @@ services:
     image: bibliotech-backend
     restart: always
     ports:
-      - '${PORT:-3000}:${PORT:-3000}'
+      - '${PORT:-3000}:3000'
     depends_on:
       - database
 
