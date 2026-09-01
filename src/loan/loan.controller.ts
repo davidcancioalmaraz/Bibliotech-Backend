@@ -11,20 +11,29 @@ import {
   ParseIntPipe,
 } from '@nestjs/common'
 import {
+  ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger'
 
+import { Roles } from '../auth/decorators/roles.decorator.js'
+import { UserRole } from '../user/entities/index.js'
 import { LoanService } from './loan.service.js'
 import { CreateLoanDto } from './dto/create-loan.dto.js'
 import { UpdateLoanDto } from './dto/update-loan.dto.js'
 import { LoanResponseDto } from './dto/loan-response.dto.js'
 
 @ApiTags('loans')
+@ApiBearerAuth()
+@Roles(UserRole.ADMIN)
+@ApiUnauthorizedResponse({ description: 'Missing, expired or invalid token' })
+@ApiForbiddenResponse({ description: 'Requires the admin role' })
 @Controller('loans')
 export class LoanController {
   constructor(private readonly loanService: LoanService) {}

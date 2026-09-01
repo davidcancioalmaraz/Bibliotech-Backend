@@ -11,19 +11,28 @@ import {
   ParseIntPipe,
 } from '@nestjs/common'
 import {
+  ApiBearerAuth,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger'
 
+import { Roles } from '../auth/decorators/roles.decorator.js'
+import { UserRole } from './entities/index.js'
 import { UserService } from './user.service.js'
 import { CreateUserDto } from './dto/create-user.dto.js'
 import { UpdateUserDto } from './dto/update-user.dto.js'
 import { UserResponseDto } from './dto/user-response.dto.js'
 
 @ApiTags('users')
+@ApiBearerAuth()
+@Roles(UserRole.ADMIN)
+@ApiUnauthorizedResponse({ description: 'Missing, expired or invalid token' })
+@ApiForbiddenResponse({ description: 'Requires the admin role' })
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}

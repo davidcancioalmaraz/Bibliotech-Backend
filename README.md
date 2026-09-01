@@ -89,15 +89,15 @@ are only consumed by `docker-compose.yml`.
 ```
 src/
   main.ts                 Bootstrap, listens on PORT
-  app.module.ts           Root module, registers ConfigModule and TypeOrmModule
+  app.module.ts           Root module: ConfigModule, TypeOrmModule and the global guards
   auth/
     auth.controller.ts    HTTP routes for /auth
     auth.service.ts       Credential check and token signing
     auth.module.ts        Wires UserModule, PassportModule and JwtModule
     dto/                  LoginDto, validated with class-validator
     strategies/           JwtStrategy, verifies the Bearer token
-    guards/               JwtAuthGuard, protects routes
-    decorators/           @CurrentUser(), reads request.user
+    guards/               JwtAuthGuard and RolesGuard, both registered globally
+    decorators/           @CurrentUser(), @Public() and @Roles()
     types/                JwtPayload and AuthenticatedUser
   book/
     book.controller.ts    HTTP routes for /book
@@ -146,32 +146,35 @@ the `class-validator` decorators and the JSDoc above each property, which is why
 by hand. **The plugin only runs under `nest build` and `nest start`** — Vitest does not apply it, so a test that
 inspected the OpenAPI document would see empty schemas.
 
-| Method | Route         | Description                    |
-|--------|---------------|--------------------------------|
-| `POST` | `/auth/login` | Exchange credentials for a JWT |
-| `GET`  | `/auth/me`    | Current user — requires a JWT  |
+The **Access** column is enforced by the two global guards — see
+[Authorization](#authorization).
 
-| Method   | Route       | Description   |
-|----------|-------------|---------------|
-| `POST`   | `/book`     | Create a book |
-| `GET`    | `/book`     | List books    |
-| `GET`    | `/book/:id` | Get a book    |
-| `PATCH`  | `/book/:id` | Update a book |
-| `DELETE` | `/book/:id` | Delete a book |
-| `POST`   | `/user`     | Create a user |
-| `GET`    | `/user`     | List users    |
-| `GET`    | `/user/:id` | Get a user    |
-| `PATCH`  | `/user/:id` | Update a user |
-| `DELETE` | `/user/:id` | Delete a user |
+| Method | Route         | Description                    | Access   |
+|--------|---------------|--------------------------------|----------|
+| `POST` | `/auth/login` | Exchange credentials for a JWT | Public   |
+| `GET`  | `/auth/me`    | Current user behind the token  | Any user |
 
-| Method   | Route              | Description                                              |
-|----------|--------------------|----------------------------------------------------------|
-| `POST`   | `/loan`            | Lend an available copy                                   |
-| `GET`    | `/loan`            | List loans, most recently lent first                     |
-| `GET`    | `/loan/:id`        | Get a loan                                               |
-| `PATCH`  | `/loan/:id`        | Adjust the dates of an open loan — an extension          |
-| `POST`   | `/loan/:id/return` | Close the loan and put the copy back on the shelf        |
-| `DELETE` | `/loan/:id`        | Delete a loan; an open one releases its book             |
+| Method   | Route        | Description   | Access   |
+|----------|--------------|---------------|----------|
+| `POST`   | `/books`     | Create a book | Admin    |
+| `GET`    | `/books`     | List books    | Any user |
+| `GET`    | `/books/:id` | Get a book    | Any user |
+| `PATCH`  | `/books/:id` | Update a book | Admin    |
+| `DELETE` | `/books/:id` | Delete a book | Admin    |
+| `POST`   | `/users`     | Create a user | Admin    |
+| `GET`    | `/users`     | List users    | Admin    |
+| `GET`    | `/users/:id` | Get a user    | Admin    |
+| `PATCH`  | `/users/:id` | Update a user | Admin    |
+| `DELETE` | `/users/:id` | Delete a user | Admin    |
+
+| Method   | Route               | Description                                       | Access |
+|----------|---------------------|---------------------------------------------------|--------|
+| `POST`   | `/loans`            | Lend an available copy                            | Admin  |
+| `GET`    | `/loans`            | List loans, most recently lent first              | Admin  |
+| `GET`    | `/loans/:id`        | Get a loan                                        | Admin  |
+| `PATCH`  | `/loans/:id`        | Adjust the dates of an open loan — an extension   | Admin  |
+| `POST`   | `/loans/:id/return` | Close the loan and put the copy back on the shelf | Admin  |
+| `DELETE` | `/loans/:id`        | Delete a loan; an open one releases its book      | Admin  |
 
 Every `:id` goes through `ParseIntPipe`, so a non-numeric one is a `400`, never a failed lookup. Request bodies are
 validated globally (see [Authentication](#authentication)).
@@ -195,8 +198,8 @@ gap in the current data model, not an oversight — see [Data model](#data-model
 ## Authentication
 
 Stateless JWT, issued by the `auth` module and verified with `@nestjs/passport` +
-`passport-jwt`. Authorization by role is a separate, later iteration: the `role`
-claim already travels in the token, but nothing enforces it yet.
+`passport-jwt`. The `role` claim travels in the token and is enforced — see
+[Authorization](#authorization).
 
 Log in with any seeded user (see [Seeders](#seeders)):
 
@@ -219,14 +222,6 @@ Send the token as a Bearer header on protected routes:
 curl localhost:3000/auth/me -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
-To protect a route in another module, import `AuthModule` and use the guard:
-
-```ts
-@UseGuards(JwtAuthGuard)
-@Get()
-findAll(@CurrentUser() user: AuthenticatedUser) { ... }
-```
-
 Notes:
 
 - **There is no logout endpoint.** A JWT is valid until it expires; logging out means discarding the token client-side.
@@ -242,6 +237,52 @@ Notes:
   a `400`, and those same decorators are what the OpenAPI schemas are generated from.
 - `JwtStrategy` looks the user up with `UserService.findById`, which returns `null` rather than throwing, so an unknown
   subject stays a `401`. `findOne` is the one that raises `404`, and it is what the controllers use.
+
+## Authorization
+
+Two guards are registered **globally** in `app.module.ts`, so a new endpoint is
+protected the day it is written — you have to opt *out*, not remember to opt in:
+
+```ts
+providers: [
+  { provide: APP_GUARD, useClass: JwtAuthGuard },
+  { provide: APP_GUARD, useClass: RolesGuard },
+],
+```
+
+The order matters: `JwtAuthGuard` runs first and puts the `AuthenticatedUser` on the
+request, which is what `RolesGuard` then reads.
+
+Two decorators drive them, both in `src/auth/decorators/`:
+
+```ts
+@Public()                 // skips JwtAuthGuard entirely — only POST /auth/login has it
+@Roles(UserRole.ADMIN)    // on a method, or on the controller to cover every route
+```
+
+`RolesGuard` resolves the metadata with `getAllAndOverride([handler, class])`, so a
+controller-level `@Roles()` covers all of its routes and a method can still narrow it.
+A route with no `@Roles()` only needs a valid token, whatever the role.
+
+That gives three levels:
+
+| Level    | Answer without it | Where it comes from                     |
+|----------|-------------------|-----------------------------------------|
+| Public   | —                 | `@Public()`                             |
+| Any user | `401`             | The default: no decorator at all        |
+| Admin    | `403`             | `@Roles(UserRole.ADMIN)`                |
+
+`books` is the only mixed controller: reads are open to any authenticated user, and
+`POST`/`PATCH`/`DELETE` carry `@Roles(UserRole.ADMIN)`. `users` and `loans` carry it
+at the class level.
+
+**`POST /users` is admin-only, so there is no public sign-up.** Accounts are created
+from an admin session; the seeder provides `admin@bibliotech.test` to bootstrap the
+first one.
+
+Swagger mirrors all of this: every protected controller carries `@ApiBearerAuth()`,
+so `/docs` shows a padlock on everything except `POST /auth/login`, and the `401`/`403`
+answers are documented per route.
 
 ## Data model
 

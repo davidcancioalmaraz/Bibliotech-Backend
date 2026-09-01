@@ -16,6 +16,7 @@ import {
 
 import { AuthService } from './auth.service.js'
 import { CurrentUser } from './decorators/current-user.decorator.js'
+import { Public } from './decorators/public.decorator.js'
 import {
   AuthenticatedUserDto,
   LoginResponseDto,
@@ -30,6 +31,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   /** Exchanges credentials for a JWT. */
+  @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: LoginResponseDto })
