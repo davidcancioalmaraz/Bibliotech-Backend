@@ -2,7 +2,7 @@ import type { DataSource } from 'typeorm'
 import type { Seeder } from 'typeorm-extension'
 
 import { User, UserRole } from '../../user/entities/index.ts'
-import { hashPassword } from '../../user/password.js'
+import { hashPassword } from '../../user/utils/password.ts'
 
 const DEFAULT_PASSWORD = 'Bibliotech123'
 

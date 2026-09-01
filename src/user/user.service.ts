@@ -4,7 +4,7 @@ import { Repository } from 'typeorm'
 
 import { CreateUserDto } from './dto/create-user.dto.js'
 import { UpdateUserDto } from './dto/update-user.dto.js'
-import { hashPassword } from './password.js'
+import { hashPassword } from './utils/password.ts'
 import { User } from './entities/index.ts'
 
 @Injectable()
@@ -33,6 +33,14 @@ export class UserService {
 
   findOne(id: number) {
     return this.userRepository.findOneBy({ id })
+  }
+
+  findByEmailWithPassword(email: string) {
+    return this.userRepository
+      .createQueryBuilder('user')
+      .addSelect('user.password')
+      .where('user.email = :email', { email })
+      .getOne()
   }
 
   async update(id: number, updateUserDto: UpdateUserDto) {
