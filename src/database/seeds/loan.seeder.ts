@@ -1,10 +1,11 @@
 import type { DataSource } from 'typeorm'
 import type { Seeder, SeederFactoryManager } from 'typeorm-extension'
 
-import { Book, BookStatus } from '../../book/entities/index.ts'
-import { Loan } from '../../loan/entities/index.ts'
+import { Book, BookStatus } from '../../book/entities/index.js'
+import { Loan } from '../../loan/entities/index.js'
+import { today } from '../../loan/utils/dates.js'
 import { faker } from './faker.js'
-import { fecharAbierto, fecharDevuelto, hoy } from './loan.factory.js'
+import { dateAsOpen, dateAsReturned } from './loan.factory.js'
 
 const DEFAULT_MAX_LOANS_PER_BOOK = 3
 
@@ -27,31 +28,31 @@ export class LoanSeeder implements Seeder {
     const loans: Loan[] = []
 
     for (const book of books) {
-      // El historial se construye hacia atrás desde el préstamo vivo (o desde
-      // hoy), así que ningún ejemplar acaba prestado dos veces a la vez.
-      let corte = hoy()
+      // The history is built backwards from the open loan (or from today), so
+      // no copy ends up lent twice at the same time.
+      let cutoff = today()
 
-      // Un libro prestado tiene exactamente un préstamo sin devolver.
+      // A lent book has exactly one loan that has not been returned.
       if (book.status === BookStatus.ON_LOAN) {
-        const abierto = fecharAbierto(await factory.make())
-        abierto.bookId = book.id
-        loans.push(abierto)
-        corte = abierto.loanedAt
+        const open = dateAsOpen(await factory.make())
+        open.bookId = book.id
+        loans.push(open)
+        cutoff = open.loanedAt
       }
 
-      const historico = faker.number.int({ min: 0, max: maxPerBook })
+      const history = faker.number.int({ min: 0, max: maxPerBook })
 
-      for (let i = 0; i < historico; i++) {
-        const loan = fecharDevuelto(await factory.make(), corte)
+      for (let i = 0; i < history; i++) {
+        const loan = dateAsReturned(await factory.make(), cutoff)
         loan.bookId = book.id
         loans.push(loan)
-        corte = loan.loanedAt
+        cutoff = loan.loanedAt
       }
     }
 
     await dataSource.getRepository(Loan).save(loans)
 
-    const abiertos = loans.filter((loan) => loan.returnedAt === null).length
-    console.log(`Seeded ${loans.length} loans (${abiertos} still open)`)
+    const stillOpen = loans.filter((loan) => loan.returnedAt === null).length
+    console.log(`Seeded ${loans.length} loans (${stillOpen} still open)`)
   }
 }

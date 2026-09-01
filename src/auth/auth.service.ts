@@ -15,7 +15,7 @@ export class AuthService {
   ) {}
 
   async validateUser(email: string, password: string): Promise<User> {
-    const invalid = new UnauthorizedException('Credenciales inválidas')
+    const invalid = new UnauthorizedException('Invalid credentials')
 
     const user = await this.userService.findByEmailWithPassword(email)
     if (!user || !user.isActive) throw invalid
