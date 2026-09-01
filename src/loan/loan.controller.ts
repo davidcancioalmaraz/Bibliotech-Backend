@@ -12,6 +12,7 @@ import {
   Query,
 } from '@nestjs/common'
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
@@ -36,6 +37,7 @@ import { LoanResponseDto } from './dto/loan-response.dto.js'
 @Roles(UserRole.ADMIN)
 @ApiUnauthorizedResponse({ description: 'Missing, expired or invalid token' })
 @ApiForbiddenResponse({ description: 'Requires the admin role' })
+@ApiBadRequestResponse({ description: 'The payload failed validation' })
 @Controller('loans')
 export class LoanController {
   constructor(private readonly loanService: LoanService) {}
@@ -47,6 +49,9 @@ export class LoanController {
   @Post()
   @ApiCreatedResponse({ type: LoanResponseDto })
   @ApiNotFoundResponse({ description: 'The book does not exist' })
+  @ApiBadRequestResponse({
+    description: '`loanedAt` is not a past `YYYY-MM-DD` date',
+  })
   @ApiConflictResponse({ description: 'The book is not available for loan' })
   create(@Body() createLoanDto: CreateLoanDto) {
     return this.loanService.create(createLoanDto)
@@ -71,6 +76,9 @@ export class LoanController {
   @Patch(':id')
   @ApiOkResponse({ type: LoanResponseDto })
   @ApiNotFoundResponse({ description: 'The loan does not exist' })
+  @ApiBadRequestResponse({
+    description: '`loanedAt` is not a past `YYYY-MM-DD` date',
+  })
   @ApiConflictResponse({ description: 'The loan is already returned' })
   update(
     @Param('id', ParseIntPipe) id: number,

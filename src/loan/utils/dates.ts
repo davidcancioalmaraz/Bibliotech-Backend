@@ -33,3 +33,10 @@ export const parseDateOnly = (value: string) => {
  */
 export const toDateOnly = (value: Date | string) =>
   typeof value === 'string' ? parseDateOnly(value) : dateOnly(value)
+
+/**
+ * Whole days between two dates. `Math.round` absorbs the 23- and 25-hour days a
+ * DST boundary produces, which plain division would turn into a fractional term.
+ */
+export const daysBetween = (from: Date, to: Date) =>
+  Math.round((dateOnly(to).getTime() - dateOnly(from).getTime()) / 86_400_000)
