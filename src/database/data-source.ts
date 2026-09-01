@@ -15,6 +15,7 @@ export const dataSourceOptions: DataSourceOptions = {
   synchronize: false,
   migrationsRun: process.env.DB_MIGRATIONS_RUN === 'true',
   logging: process.env.DB_LOGGING === 'true',
+  entities: [join(import.meta.dirname, '..', '**', '*.entity.{ts,js}')],
   migrations: process.env.VITEST
     ? []
     : [join(import.meta.dirname, 'migrations', '*.{ts,js}')],

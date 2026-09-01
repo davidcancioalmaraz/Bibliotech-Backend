@@ -1,8 +1,12 @@
+import { TypeOrmModule } from '@nestjs/typeorm'
 import { Module } from '@nestjs/common'
-import { LoanService } from './loan.service.js'
+
 import { LoanController } from './loan.controller.js'
+import { LoanService } from './loan.service.js'
+import { Loan } from './entities/index.ts'
 
 @Module({
+  imports: [TypeOrmModule.forFeature([Loan])],
   controllers: [LoanController],
   providers: [LoanService],
 })
