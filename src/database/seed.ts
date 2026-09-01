@@ -3,16 +3,18 @@ import { runSeeders } from 'typeorm-extension'
 
 import { Book } from '../book/entities/index.ts'
 import { Loan } from '../loan/entities/index.ts'
+import { User } from '../user/entities/index.ts'
 import { dataSourceOptions } from './data-source.js'
 import { bookFactory } from './seeds/book.factory.js'
 import { faker } from './seeds/faker.js'
 import { loanFactory } from './seeds/loan.factory.js'
 import { BookSeeder } from './seeds/book.seeder.js'
 import { LoanSeeder } from './seeds/loan.seeder.js'
+import { UserSeeder } from './seeds/user.seeder.js'
 
 const dataSource = new DataSource({
   ...dataSourceOptions,
-  entities: [Book, Loan],
+  entities: [Book, Loan, User],
   migrationsRun: false,
 })
 
@@ -24,7 +26,7 @@ try {
   }
 
   if (process.env.SEED_FRESH === 'true') {
-    const tables = [Loan, Book].map(
+    const tables = [Loan, Book, User].map(
       (entity) => dataSource.getRepository(entity).metadata.tableName,
     )
     await dataSource.query(
@@ -34,7 +36,7 @@ try {
   }
 
   await runSeeders(dataSource, {
-    seeds: [BookSeeder, LoanSeeder],
+    seeds: [BookSeeder, LoanSeeder, UserSeeder],
     factories: [bookFactory, loanFactory],
   })
 } finally {

@@ -14,7 +14,7 @@ export enum BookStatus {
   UNDER_REPAIR = 'under-repair',
 }
 
-@Entity()
+@Entity('books')
 export class Book {
   @PrimaryGeneratedColumn()
   id: number

@@ -10,7 +10,7 @@ import {
 } from 'typeorm'
 import { Book } from '../../book/entities/index.ts'
 
-@Entity()
+@Entity('loans')
 export class Loan {
   @PrimaryGeneratedColumn()
   id: number
