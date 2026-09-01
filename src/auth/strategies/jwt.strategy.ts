@@ -22,7 +22,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
-    const user = await this.userService.findOne(payload.sub)
+    const user = await this.userService.findById(payload.sub)
     if (!user || !user.isActive)
       throw new UnauthorizedException('Invalid credentials')
 

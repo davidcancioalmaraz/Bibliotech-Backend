@@ -4,8 +4,8 @@ import { Repository } from 'typeorm'
 
 import { CreateUserDto } from './dto/create-user.dto.js'
 import { UpdateUserDto } from './dto/update-user.dto.js'
-import { hashPassword } from './utils/password.ts'
-import { User } from './entities/index.ts'
+import { hashPassword } from './utils/password.js'
+import { User } from './entities/index.js'
 
 @Injectable()
 export class UserService {
@@ -22,8 +22,8 @@ export class UserService {
       }),
     )
 
-    // `save` devuelve la entidad en memoria, con el hash incluido; la columna
-    // es `select: false` justamente para no exponerlo.
+    // `save` returns the in-memory entity, hash included; the column is
+    // `select: false` precisely so it never ships.
     return this.findOne(user.id)
   }
 
@@ -31,7 +31,18 @@ export class UserService {
     return this.userRepository.find()
   }
 
-  findOne(id: number) {
+  async findOne(id: number) {
+    const user = await this.findById(id)
+    if (!user) throw new NotFoundException(`User ${id} not found`)
+
+    return user
+  }
+
+  /**
+   * Non-throwing lookup for `JwtStrategy`, which turns an unknown user into a
+   * 401, not the 404 `findOne` would raise.
+   */
+  findById(id: number) {
     return this.userRepository.findOneBy({ id })
   }
 
@@ -44,11 +55,17 @@ export class UserService {
   }
 
   async update(id: number, updateUserDto: UpdateUserDto) {
+    const user = await this.findOne(id)
+
     if (updateUserDto.password) {
       updateUserDto.password = await hashPassword(updateUserDto.password)
     }
 
-    return this.userRepository.update(id, updateUserDto)
+    await this.userRepository.save(Object.assign(user, updateUserDto))
+
+    // Re-read for the same reason as in `create`: the saved entity carries the
+    // hash in memory, and it must not travel in the response.
+    return this.findOne(id)
   }
 
   async remove(id: number) {

@@ -1,14 +1,14 @@
 import type { LocaleDefinition } from '@faker-js/faker'
 
 /**
- * Capa de locale propia con el vocabulario de libros en español.
+ * Custom locale layer holding the Spanish book vocabulary.
  *
- * El locale `es` oficial de faker no define `book` ni `word`, así que sin esta
- * capa `faker.book.*` cae al inglés. Se monta como primera capa de la cadena
- * `[esLibros, es, base]` en `book.factory.ts`.
+ * Faker's official `es` locale defines neither `book` nor `word`, so without
+ * this layer `faker.book.*` falls back to English. It is mounted as the first
+ * layer of the `[esLibros, es, base]` chain in `book.factory.ts`.
  *
- * Los sustantivos son todos masculinos y los adjetivos van en masculino
- * singular, para que las plantillas concuerden en género sin excepciones.
+ * The nouns are all masculine and the adjectives are in masculine singular, so
+ * the templates agree in gender with no exceptions.
  */
 
 const sustantivos = [
@@ -129,7 +129,7 @@ export const esLibros: LocaleDefinition = {
       'Arte',
     ],
 
-    // Plantillas: se resuelven con faker.helpers.fake() en la factory.
+    // Templates: resolved with faker.helpers.fake() in the factory.
     title: [
       'El {{word.noun}} de {{location.city}}',
       'El {{word.noun}} {{word.adjective}}',
@@ -158,8 +158,8 @@ export const esLibros: LocaleDefinition = {
   },
 }
 
-/** Plantillas de sinopsis, resueltas también con faker.helpers.fake(). */
-export const plantillasDescripcion = [
+/** Synopsis templates, also resolved with faker.helpers.fake(). */
+export const descriptionTemplates = [
   'Una novela ambientada en {{location.city}} que explora el {{word.noun}} a través de tres generaciones.',
   'Un relato {{word.adjective}} sobre el {{word.noun}} y la memoria de una familia.',
   'Tras el {{word.noun}} de su padre, el protagonista regresa a {{location.city}} en busca de respuestas.',
