@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { DataSource, type EntityManager, Repository } from 'typeorm'
 
 import { Book, BookStatus } from '../book/entities/index.js'
+import { PaginationQueryDto, paginate } from '../common/index.js'
 import { CreateLoanDto } from './dto/create-loan.dto.js'
 import { UpdateLoanDto } from './dto/update-loan.dto.js'
 import { Loan } from './entities/index.js'
@@ -73,8 +74,10 @@ export class LoanService {
     })
   }
 
-  findAll() {
-    return this.loanRepository.find({ order: { loanedAt: 'DESC', id: 'DESC' } })
+  findAll(query: PaginationQueryDto) {
+    return paginate(this.loanRepository, query, {
+      order: { loanedAt: 'DESC', id: 'DESC' },
+    })
   }
 
   async findOne(id: number) {

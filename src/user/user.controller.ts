@@ -9,6 +9,7 @@ import {
   HttpCode,
   HttpStatus,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common'
 import {
   ApiBearerAuth,
@@ -22,6 +23,7 @@ import {
 } from '@nestjs/swagger'
 
 import { Roles } from '../auth/decorators/roles.decorator.js'
+import { ApiPaginatedResponse, PaginationQueryDto } from '../common/index.js'
 import { UserRole } from './entities/index.js'
 import { UserService } from './user.service.js'
 import { CreateUserDto } from './dto/create-user.dto.js'
@@ -44,11 +46,11 @@ export class UserController {
     return this.userService.create(createUserDto)
   }
 
-  /** Lists every user. */
+  /** Lists the users, one page at a time. */
   @Get()
-  @ApiOkResponse({ type: [UserResponseDto] })
-  findAll() {
-    return this.userService.findAll()
+  @ApiPaginatedResponse(UserResponseDto)
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.userService.findAll(query)
   }
 
   /** Retrieves a single user. */

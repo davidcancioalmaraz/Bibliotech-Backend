@@ -9,6 +9,7 @@ import {
   HttpCode,
   HttpStatus,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common'
 import {
   ApiBearerAuth,
@@ -23,6 +24,7 @@ import {
 } from '@nestjs/swagger'
 
 import { Roles } from '../auth/decorators/roles.decorator.js'
+import { ApiPaginatedResponse, PaginationQueryDto } from '../common/index.js'
 import { UserRole } from '../user/entities/index.js'
 import { LoanService } from './loan.service.js'
 import { CreateLoanDto } from './dto/create-loan.dto.js'
@@ -50,11 +52,11 @@ export class LoanController {
     return this.loanService.create(createLoanDto)
   }
 
-  /** Lists every loan, most recently lent first. */
+  /** Lists the loans, most recently lent first, one page at a time. */
   @Get()
-  @ApiOkResponse({ type: [LoanResponseDto] })
-  findAll() {
-    return this.loanService.findAll()
+  @ApiPaginatedResponse(LoanResponseDto)
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.loanService.findAll(query)
   }
 
   /** Retrieves a single loan. */
