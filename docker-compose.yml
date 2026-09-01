@@ -34,6 +34,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-bibliotech-password}
       DB_DATABASE: ${DB_DATABASE:-postgres}
       DB_MIGRATIONS_RUN: "true"
+      JWT_SECRET: ${JWT_SECRET:?Missing JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
     depends_on:
       database:
         condition: service_healthy
