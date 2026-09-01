@@ -40,5 +40,31 @@ services:
       database:
         condition: service_healthy
 
+  seeder:
+    profiles: ["tooling"]
+    build:
+      context: .
+    image: bibliotech-backend
+    restart: "no"
+    command: ["node", "database/seed.js"]
+    environment:
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-bibliotech-password}
+      DB_DATABASE: ${DB_DATABASE:-postgres}
+      DB_MIGRATIONS_RUN: "false"
+      DB_LOGGING: ${DB_LOGGING:-false}
+      # Left unset here so the seeder's own defaults apply; override per run
+      # with `-e` or in .env
+      SEED_BOOK_COUNT:
+      SEED_FRESH:
+      SEED_FAKER_SEED:
+      SEED_USER_PASSWORD:
+      SEED_LOAN_MAX_PER_BOOK:
+    depends_on:
+      database:
+        condition: service_healthy
+
 volumes:
   database_data:

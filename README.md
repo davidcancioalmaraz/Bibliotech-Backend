@@ -152,8 +152,12 @@ credentials after every reseed, all sharing the password `Bibliotech123`.
 npm run seed
 
 # inside Docker Compose
-docker compose exec bibliotech-backend node database/seed.js
+docker compose run --rm seeder
 ```
+
+The `seeder` service sits behind the `tooling` profile, so `docker compose up` never starts it: it exists only to be
+run on demand and exits when the seeding finishes. It reuses the `bibliotech-backend` image, so build it first
+(`docker compose build`) or add `--build` to the `run`.
 
 Four environment variables tune a run:
 
@@ -166,7 +170,13 @@ Four environment variables tune a run:
 
 ```shell
 SEED_FRESH=true SEED_BOOK_COUNT=100 npm run seed
+
+# the same, through the tooling service
+docker compose run --rm -e SEED_FRESH=true -e SEED_BOOK_COUNT=100 seeder
 ```
+
+The service passes those variables straight through from your shell or `.env`, and leaves them unset otherwise so the
+seeder's own defaults apply.
 
 The seeder is **not** idempotent by design: running it again appends another batch of random books. Use
 `SEED_FRESH=true` to reset instead of accumulating.
