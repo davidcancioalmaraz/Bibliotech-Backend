@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 
+import { PaginationQueryDto, paginate } from '../common/index.js'
 import { CreateUserDto } from './dto/create-user.dto.js'
 import { UpdateUserDto } from './dto/update-user.dto.js'
 import { hashPassword } from './utils/password.js'
@@ -27,8 +28,8 @@ export class UserService {
     return this.findOne(user.id)
   }
 
-  findAll() {
-    return this.userRepository.find()
+  findAll(query: PaginationQueryDto) {
+    return paginate(this.userRepository, query, { order: { id: 'ASC' } })
   }
 
   async findOne(id: number) {

@@ -82,26 +82,26 @@ protected route from Swagger UI, run `POST /auth/login`, copy the `accessToken` 
 | `POST` | `/auth/login` | Exchange credentials for a JWT | Public   |
 | `GET`  | `/auth/me`    | Current user behind the token  | Any user |
 
-| Method   | Route        | Description   | Access   |
-|----------|--------------|---------------|----------|
-| `POST`   | `/books`     | Create a book | Admin    |
-| `GET`    | `/books`     | List books    | Any user |
-| `GET`    | `/books/:id` | Get a book    | Any user |
-| `PATCH`  | `/books/:id` | Update a book | Admin    |
-| `DELETE` | `/books/:id` | Delete a book | Admin    |
+| Method   | Route        | Description           | Access   |
+|----------|--------------|-----------------------|----------|
+| `POST`   | `/books`     | Create a book         | Admin    |
+| `GET`    | `/books`     | List books, paginated | Any user |
+| `GET`    | `/books/:id` | Get a book            | Any user |
+| `PATCH`  | `/books/:id` | Update a book         | Admin    |
+| `DELETE` | `/books/:id` | Delete a book         | Admin    |
 
-| Method   | Route        | Description   | Access |
-|----------|--------------|---------------|--------|
-| `POST`   | `/users`     | Create a user | Admin  |
-| `GET`    | `/users`     | List users    | Admin  |
-| `GET`    | `/users/:id` | Get a user    | Admin  |
-| `PATCH`  | `/users/:id` | Update a user | Admin  |
-| `DELETE` | `/users/:id` | Delete a user | Admin  |
+| Method   | Route        | Description           | Access |
+|----------|--------------|-----------------------|--------|
+| `POST`   | `/users`     | Create a user         | Admin  |
+| `GET`    | `/users`     | List users, paginated | Admin  |
+| `GET`    | `/users/:id` | Get a user            | Admin  |
+| `PATCH`  | `/users/:id` | Update a user         | Admin  |
+| `DELETE` | `/users/:id` | Delete a user         | Admin  |
 
 | Method   | Route               | Description                                       | Access |
 |----------|---------------------|---------------------------------------------------|--------|
 | `POST`   | `/loans`            | Lend an available copy                            | Admin  |
-| `GET`    | `/loans`            | List loans, most recently lent first              | Admin  |
+| `GET`    | `/loans`            | List loans, most recently lent first, paginated   | Admin  |
 | `GET`    | `/loans/:id`        | Get a loan                                        | Admin  |
 | `PATCH`  | `/loans/:id`        | Adjust the dates of an open loan — an extension   | Admin  |
 | `POST`   | `/loans/:id/return` | Close the loan and put the copy back on the shelf | Admin  |
@@ -119,6 +119,41 @@ curl -X POST localhost:3000/auth/login \
 
 curl localhost:3000/auth/me -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
+
+### Pagination
+
+The three list endpoints — `GET /books`, `GET /users` and `GET /loans` — take `page` and `limit`, and answer with a
+`data` + `meta` envelope rather than a bare array.
+
+| Parameter | Default | Range     |
+|-----------|---------|-----------|
+| `page`    | `1`     | `>= 1`    |
+| `limit`   | `20`    | `1`–`100` |
+
+```shell
+curl "localhost:3000/books?page=2&limit=10" -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+```json
+{
+  "data": [{ "id": 11, "title": "..." }],
+  "meta": {
+    "page": 2,
+    "limit": 10,
+    "total": 137,
+    "totalPages": 14,
+    "hasPreviousPage": true,
+    "hasNextPage": true
+  }
+}
+```
+
+Anything outside those ranges answers `400`, and so does an unknown query parameter — the global `ValidationPipe` runs
+with `forbidNonWhitelisted`. Asking for a page past the end is not an error: `data` comes back empty with the `meta`
+still filled in.
+
+The shared pieces live in `src/common/`: `PaginationQueryDto` for the parameters, the `paginate()` helper over
+`Repository.findAndCount`, and the `@ApiPaginatedResponse()` decorator that documents the envelope in OpenAPI.
 
 **Lending rules.** `/loans` is not plain CRUD: a copy can only be in one person's hands at a time, so anything touching
 both tables runs in a transaction. Lending a copy that is not `available` answers `409`, as does returning or editing an

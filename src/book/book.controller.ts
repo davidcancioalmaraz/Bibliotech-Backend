@@ -9,6 +9,7 @@ import {
   HttpCode,
   HttpStatus,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common'
 import {
   ApiBearerAuth,
@@ -22,6 +23,7 @@ import {
 } from '@nestjs/swagger'
 
 import { Roles } from '../auth/decorators/roles.decorator.js'
+import { ApiPaginatedResponse, PaginationQueryDto } from '../common/index.js'
 import { UserRole } from '../user/entities/index.js'
 import { BookService } from './book.service.js'
 import { CreateBookDto } from './dto/create-book.dto.js'
@@ -44,11 +46,11 @@ export class BookController {
     return this.bookService.create(createBookDto)
   }
 
-  /** Lists the whole catalogue. */
+  /** Lists the catalogue, one page at a time. */
   @Get()
-  @ApiOkResponse({ type: [BookResponseDto] })
-  findAll() {
-    return this.bookService.findAll()
+  @ApiPaginatedResponse(BookResponseDto)
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.bookService.findAll(query)
   }
 
   /** Retrieves a single book. */
