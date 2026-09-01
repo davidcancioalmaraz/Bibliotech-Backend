@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
-import { APP_GUARD } from '@nestjs/core'
+import { APP_FILTER, APP_GUARD } from '@nestjs/core'
 import { TypeOrmModule } from '@nestjs/typeorm'
 
 import { AuthModule } from './auth/auth.module.js'
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard.js'
 import { RolesGuard } from './auth/guards/roles.guard.js'
 import { BookModule } from './book/book.module.js'
+import { QueryFailedFilter } from './common/index.js'
 import { LoanModule } from './loan/loan.module.js'
 import { UserModule } from './user/user.module.js'
 import { dataSourceOptions } from './database/data-source.js'
@@ -26,6 +27,9 @@ import { dataSourceOptions } from './database/data-source.js'
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    // Constraint violations the services did not catch first answer 4xx here
+    // instead of falling through as a 500.
+    { provide: APP_FILTER, useClass: QueryFailedFilter },
   ],
 })
 export class AppModule {}

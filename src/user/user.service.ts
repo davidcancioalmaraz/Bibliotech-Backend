@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 
@@ -16,6 +20,8 @@ export class UserService {
   ) {}
 
   async create(createUserDto: CreateUserDto) {
+    await this.assertEmailIsFree(createUserDto.email)
+
     const user = await this.userRepository.save(
       this.userRepository.create({
         ...createUserDto,
@@ -58,6 +64,11 @@ export class UserService {
   async update(id: number, updateUserDto: UpdateUserDto) {
     const user = await this.findOne(id)
 
+    // Only when the address actually moves: re-sending the user's own email
+    // would otherwise collide with the row being updated.
+    if (updateUserDto.email && updateUserDto.email !== user.email)
+      await this.assertEmailIsFree(updateUserDto.email)
+
     if (updateUserDto.password) {
       updateUserDto.password = await hashPassword(updateUserDto.password)
     }
@@ -73,5 +84,16 @@ export class UserService {
     const result = await this.userRepository.delete(id)
     if (result.affected === 0)
       throw new NotFoundException(`User ${id} not found`)
+  }
+
+  /**
+   * Reads before writing so the answer can name the field, which the unique
+   * index on `users.email` cannot do on its own. The index still has the last
+   * word: two simultaneous requests both pass this check and `QueryFailedFilter`
+   * turns the loser into the same 409.
+   */
+  private async assertEmailIsFree(email: string) {
+    if (await this.userRepository.existsBy({ email }))
+      throw new ConflictException(`Email ${email} is already registered`)
   }
 }

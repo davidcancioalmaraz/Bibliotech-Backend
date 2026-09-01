@@ -12,7 +12,9 @@ import {
   Query,
 } from '@nestjs/common'
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNoContentResponse,
@@ -33,6 +35,7 @@ import { BookResponseDto } from './dto/book-response.dto.js'
 @ApiTags('books')
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ description: 'Missing, expired or invalid token' })
+@ApiBadRequestResponse({ description: 'The payload failed validation' })
 @Controller('books')
 export class BookController {
   constructor(private readonly bookService: BookService) {}
@@ -42,6 +45,7 @@ export class BookController {
   @Roles(UserRole.ADMIN)
   @ApiCreatedResponse({ type: BookResponseDto })
   @ApiForbiddenResponse({ description: 'Requires the admin role' })
+  @ApiConflictResponse({ description: 'The code is already taken' })
   create(@Body() createBookDto: CreateBookDto) {
     return this.bookService.create(createBookDto)
   }
@@ -67,6 +71,10 @@ export class BookController {
   @ApiOkResponse({ type: BookResponseDto })
   @ApiForbiddenResponse({ description: 'Requires the admin role' })
   @ApiNotFoundResponse({ description: 'The book does not exist' })
+  @ApiConflictResponse({
+    description:
+      'The code is already taken, or the status conflicts with an open loan',
+  })
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateBookDto: UpdateBookDto,
@@ -81,6 +89,9 @@ export class BookController {
   @ApiNoContentResponse({ description: 'The book was deleted' })
   @ApiForbiddenResponse({ description: 'Requires the admin role' })
   @ApiNotFoundResponse({ description: 'The book does not exist' })
+  @ApiConflictResponse({
+    description: 'The book has loans recorded against it',
+  })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.bookService.remove(id)
   }

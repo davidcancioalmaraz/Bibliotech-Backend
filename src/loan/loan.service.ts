@@ -1,6 +1,7 @@
 import { randomInt } from 'node:crypto'
 
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -16,6 +17,7 @@ import { Loan } from './entities/index.js'
 import {
   DEFAULT_LOAN_TERM_DAYS,
   addDays,
+  daysBetween,
   parseDateOnly,
   toDateOnly,
   today,
@@ -42,7 +44,12 @@ export class LoanService {
 
   create(createLoanDto: CreateLoanDto) {
     return this.dataSource.transaction(async (manager) => {
-      const book = await manager.findOneBy(Book, { id: createLoanDto.bookId })
+      const book = await manager.findOne(Book, {
+        where: { id: createLoanDto.bookId },
+        // Held until the transaction commits: two simultaneous requests for the
+        // same copy would otherwise both read it as `available` and both lend it.
+        lock: { mode: 'pessimistic_write' },
+      })
       if (!book)
         throw new NotFoundException(`Book ${createLoanDto.bookId} not found`)
 
@@ -54,6 +61,8 @@ export class LoanService {
       const loanedAt = createLoanDto.loanedAt
         ? parseDateOnly(createLoanDto.loanedAt)
         : today()
+
+      this.assertNotInTheFuture(loanedAt)
 
       const loan = manager.create(Loan, {
         code: await this.generateCode(manager),
@@ -94,11 +103,21 @@ export class LoanService {
     if (loan.returnedAt !== null)
       throw new ConflictException(`Loan ${id} is already returned`)
 
-    if (updateLoanDto.loanedAt)
-      loan.loanedAt = parseDateOnly(updateLoanDto.loanedAt)
+    const loanedAt = updateLoanDto.loanedAt
+      ? parseDateOnly(updateLoanDto.loanedAt)
+      : toDateOnly(loan.loanedAt)
 
-    if (updateLoanDto.termDays)
-      loan.dueDate = addDays(toDateOnly(loan.loanedAt), updateLoanDto.termDays)
+    this.assertNotInTheFuture(loanedAt)
+
+    // The due date is always derived, never carried over: moving `loanedAt`
+    // alone used to leave the old `dueDate` behind, which could put the deadline
+    // before the day the loan started.
+    const termDays =
+      updateLoanDto.termDays ??
+      daysBetween(toDateOnly(loan.loanedAt), toDateOnly(loan.dueDate))
+
+    loan.loanedAt = loanedAt
+    loan.dueDate = addDays(loanedAt, termDays)
 
     await this.loanRepository.save(loan)
 
@@ -143,6 +162,15 @@ export class LoanService {
    */
   private async reload(manager: EntityManager, id: number) {
     return manager.findOneByOrFail(Loan, { id })
+  }
+
+  /**
+   * A copy that has not left the shelf yet must not be marked `on-loan`, and a
+   * loan cannot come due before it starts.
+   */
+  private assertNotInTheFuture(loanedAt: Date) {
+    if (loanedAt > today())
+      throw new BadRequestException('loanedAt cannot be in the future')
   }
 
   private async releaseBook(manager: EntityManager, bookId: number) {
