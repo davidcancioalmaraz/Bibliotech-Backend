@@ -61,9 +61,9 @@ src/
   main.ts             Bootstrap: global ValidationPipe, Swagger, listens on PORT
   app.module.ts       Root module: config, TypeORM and the global guards
   auth/               Login, JWT strategy, guards and decorators
-  book/               /books — controller, service, DTOs and Book entity
-  loan/               /loans — lending rules and Loan entity
-  user/               /users — controller, service, DTOs and User entity
+  book/               /api/v1/books — controller, service, DTOs and Book entity
+  loan/               /api/v1/loans — lending rules and Loan entity
+  user/               /api/v1/users — controller, service, DTOs and User entity
   database/
     data-source.ts    Connection config, shared by the app and the TypeORM CLI
     migrations/       Migration files
@@ -77,38 +77,38 @@ Each feature module follows the same shape: `*.controller.ts`, `*.service.ts`, `
 ## API
 
 The live and authoritative reference is **http://localhost:3000/docs** (raw document at `/docs-json`). To call a
-protected route from Swagger UI, run `POST /auth/login`, copy the `accessToken` and paste it under **Authorize**.
+protected route from Swagger UI, run `POST /api/v1/auth/login`, copy the `accessToken` and paste it under **Authorize**.
 
-| Method | Route         | Description                    | Access   |
-|--------|---------------|--------------------------------|----------|
-| `POST` | `/auth/login` | Exchange credentials for a JWT | Public   |
-| `GET`  | `/auth/me`    | Current user behind the token  | Any user |
+| Method | Route                | Description                    | Access   |
+|--------|----------------------|--------------------------------|----------|
+| `POST` | `/api/v1/auth/login` | Exchange credentials for a JWT | Public   |
+| `GET`  | `/api/v1/auth/me`    | Current user behind the token  | Any user |
 
-| Method   | Route        | Description           | Access   |
-|----------|--------------|-----------------------|----------|
-| `POST`   | `/books`     | Create a book         | Admin    |
-| `GET`    | `/books`     | List books, paginated | Any user |
-| `GET`    | `/books/:id` | Get a book            | Any user |
-| `PATCH`  | `/books/:id` | Update a book         | Admin    |
-| `DELETE` | `/books/:id` | Delete a book         | Admin    |
+| Method   | Route               | Description           | Access   |
+|----------|---------------------|-----------------------|----------|
+| `POST`   | `/api/v1/books`     | Create a book         | Admin    |
+| `GET`    | `/api/v1/books`     | List books, paginated | Any user |
+| `GET`    | `/api/v1/books/:id` | Get a book            | Any user |
+| `PATCH`  | `/api/v1/books/:id` | Update a book         | Admin    |
+| `DELETE` | `/api/v1/books/:id` | Delete a book         | Admin    |
 
-| Method   | Route        | Description                 | Access |
-|----------|--------------|-----------------------------|--------|
-| `POST`   | `/users`     | Create a user               | Admin  |
-| `GET`    | `/users`     | List users, paginated       | Admin  |
-| `GET`    | `/users/:id` | Get a user                  | Admin  |
-| `PATCH`  | `/users/:id` | Update a user               | Admin  |
-| `DELETE` | `/users/:id` | Delete a user without loans | Admin  |
+| Method   | Route               | Description                 | Access |
+|----------|---------------------|-----------------------------|--------|
+| `POST`   | `/api/v1/users`     | Create a user               | Admin  |
+| `GET`    | `/api/v1/users`     | List users, paginated       | Admin  |
+| `GET`    | `/api/v1/users/:id` | Get a user                  | Admin  |
+| `PATCH`  | `/api/v1/users/:id` | Update a user               | Admin  |
+| `DELETE` | `/api/v1/users/:id` | Delete a user without loans | Admin  |
 
-| Method   | Route               | Description                                       | Access   |
-|----------|---------------------|---------------------------------------------------|----------|
-| `POST`   | `/loans`            | Lend an available copy to a user                  | Admin    |
-| `GET`    | `/loans`            | List loans, most recently lent first, paginated   | Admin    |
-| `GET`    | `/loans/me`         | List my open loans, paginated                     | Any user |
-| `GET`    | `/loans/:id`        | Get a loan                                        | Admin    |
-| `PATCH`  | `/loans/:id`        | Adjust the dates of an open loan — an extension   | Admin    |
-| `POST`   | `/loans/:id/return` | Close the loan and put the copy back on the shelf | Admin    |
-| `DELETE` | `/loans/:id`        | Delete a loan; an open one releases its book      | Admin    |
+| Method   | Route                      | Description                                       | Access   |
+|----------|----------------------------|---------------------------------------------------|----------|
+| `POST`   | `/api/v1/loans`            | Lend an available copy to a user                  | Admin    |
+| `GET`    | `/api/v1/loans`            | List loans, most recently lent first, paginated   | Admin    |
+| `GET`    | `/api/v1/loans/me`         | List my open loans, paginated                     | Any user |
+| `GET`    | `/api/v1/loans/:id`        | Get a loan                                        | Admin    |
+| `PATCH`  | `/api/v1/loans/:id`        | Adjust the dates of an open loan — an extension   | Admin    |
+| `POST`   | `/api/v1/loans/:id/return` | Close the loan and put the copy back on the shelf | Admin    |
+| `DELETE` | `/api/v1/loans/:id`        | Delete a loan; an open one releases its book      | Admin    |
 
 Access is enforced by two guards registered globally, so an endpoint is protected the day it is written: `@Public()`
 opts out of authentication, `@Roles(UserRole.ADMIN)` restricts to admins, and no decorator means any valid token.
@@ -116,16 +116,16 @@ opts out of authentication, `@Roles(UserRole.ADMIN)` restricts to admins, and no
 Authenticate with a seeded user and send the token as a Bearer header:
 
 ```shell
-curl -X POST localhost:3000/auth/login \
+curl -X POST localhost:3000/api/v1/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"admin@bibliotech.test","password":"Bibliotech123"}'
 
-curl localhost:3000/auth/me -H "Authorization: Bearer $ACCESS_TOKEN"
+curl localhost:3000/api/v1/auth/me -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
 ### Pagination
 
-The list endpoints — `GET /books`, `GET /users`, `GET /loans` and `GET /loans/me` — take `page` and `limit`, and answer
+The list endpoints — `GET /api/v1/books`, `GET /api/v1/users`, `GET /api/v1/loans` and `GET /api/v1/loans/me` — take `page` and `limit`, and answer
 with a `data` + `meta` envelope rather than a bare array.
 
 | Parameter | Default | Range     |
@@ -134,7 +134,7 @@ with a `data` + `meta` envelope rather than a bare array.
 | `limit`   | `20`    | `1`–`100` |
 
 ```shell
-curl "localhost:3000/books?page=2&limit=10" -H "Authorization: Bearer $ACCESS_TOKEN"
+curl "localhost:3000/api/v1/books?page=2&limit=10" -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
 ```json
@@ -158,14 +158,14 @@ still filled in.
 The shared pieces live in `src/common/`: `PaginationQueryDto` for the parameters, the `paginate()` helper over
 `Repository.findAndCount`, and the `@ApiPaginatedResponse()` decorator that documents the envelope in OpenAPI.
 
-**Lending rules.** `/loans` is not plain CRUD: a copy can only be in one person's hands at a time, so anything touching
+**Lending rules.** `/api/v1/loans` is not plain CRUD: a copy can only be in one person's hands at a time, so anything touching
 both tables runs in a transaction. Lending a copy that is not `available` answers `409`, as does returning or editing an
 already returned loan. The loan `code` is generated server-side and `dueDate` is derived from `loanedAt` plus a term of
 14, 21 or 30 days.
 
-**Who borrows what.** A loan points at a book *and* at the user holding it, so `POST /loans` takes a `userId` alongside
+**Who borrows what.** A loan points at a book *and* at the user holding it, so `POST /api/v1/loans` takes a `userId` alongside
 the `bookId`: an unknown one answers `404`, an inactive account `409`. Neither can be changed afterwards — `PATCH
-/loans/:id` only moves dates, and handing a copy to someone else is a return followed by a new loan. Both relations are
+/api/v1/loans/:id` only moves dates, and handing a copy to someone else is a return followed by a new loan. Both relations are
 eager, so every loan travels with its `book` and its `user` embedded; the password never comes along, because the column
 is `select: false`. The inverse sides (`Book.loans`, `User.loans`) are not eager and stay out of the responses.
 
