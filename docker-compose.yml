@@ -58,6 +58,7 @@ services:
       # Left unset here so the seeder's own defaults apply; override per run
       # with `-e` or in .env
       SEED_BOOK_COUNT:
+      SEED_USER_COUNT:
       SEED_FRESH:
       SEED_FAKER_SEED:
       SEED_USER_PASSWORD:

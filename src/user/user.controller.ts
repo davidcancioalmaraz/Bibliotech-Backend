@@ -77,11 +77,12 @@ export class UserController {
     return this.userService.update(id, updateUserDto)
   }
 
-  /** Deletes a user. */
+  /** Deletes a user. One with loans on record cannot be deleted. */
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse({ description: 'The user was deleted' })
   @ApiNotFoundResponse({ description: 'The user does not exist' })
+  @ApiConflictResponse({ description: 'The user has loans recorded' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.userService.remove(id)
   }

@@ -11,6 +11,7 @@ import { DataSource, type EntityManager, Repository } from 'typeorm'
 
 import { Book, BookStatus } from '../book/entities/index.js'
 import { PaginationQueryDto, paginate } from '../common/index.js'
+import { User } from '../user/entities/index.js'
 import { CreateLoanDto } from './dto/create-loan.dto.js'
 import { UpdateLoanDto } from './dto/update-loan.dto.js'
 import { Loan } from './entities/index.js'
@@ -44,6 +45,17 @@ export class LoanService {
 
   create(createLoanDto: CreateLoanDto) {
     return this.dataSource.transaction(async (manager) => {
+      // Before the lock below, so a loan nobody can take does not hold the copy
+      // for the length of the transaction.
+      const user = await manager.findOneBy(User, { id: createLoanDto.userId })
+      if (!user)
+        throw new NotFoundException(`User ${createLoanDto.userId} not found`)
+
+      if (!user.isActive)
+        throw new ConflictException(
+          `User ${user.id} is inactive and cannot borrow`,
+        )
+
       const book = await manager.findOne(Book, {
         where: { id: createLoanDto.bookId },
         // Held until the transaction commits: two simultaneous requests for the
@@ -67,6 +79,7 @@ export class LoanService {
       const loan = manager.create(Loan, {
         code: await this.generateCode(manager),
         bookId: book.id,
+        userId: user.id,
         loanedAt,
         dueDate: addDays(
           loanedAt,

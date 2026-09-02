@@ -15,6 +15,11 @@ export class CreateLoanDto {
   @Min(1)
   bookId: number
 
+  /** Who takes the book home. They must exist and be active. @example 2 */
+  @IsInt()
+  @Min(1)
+  userId: number
+
   /** Day the book leaves the shelf, as `YYYY-MM-DD`. Defaults to today. @example '2026-09-01' */
   @IsOptional()
   // Two checks, because neither is enough on its own: the pattern rejects the
