@@ -7,6 +7,18 @@ import { AppModule } from './app.module.js'
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
 
+  // CORS_ORIGIN takes a comma-separated list of allowed origins; unset means any
+  // origin, which is fine while the API only authenticates with Bearer tokens.
+  const corsOrigin = process.env.CORS_ORIGIN?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+
+  app.enableCors({
+    origin: corsOrigin?.length ? corsOrigin : '*',
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

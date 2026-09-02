@@ -52,6 +52,8 @@ npm run start:dev
 
 Either way the API listens on http://localhost:3000 and its documentation on http://localhost:3000/docs.
 
+CORS is enabled for any origin. Set `CORS_ORIGIN` to a comma-separated list (`https://app.example.com,http://localhost:5173`) to restrict it.
+
 ## Project structure
 
 ```
