@@ -36,6 +36,7 @@ services:
       DB_MIGRATIONS_RUN: "true"
       JWT_SECRET: ${JWT_SECRET:?Missing JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
     depends_on:
       database:
         condition: service_healthy
