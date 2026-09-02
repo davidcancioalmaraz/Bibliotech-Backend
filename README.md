@@ -100,14 +100,15 @@ protected route from Swagger UI, run `POST /auth/login`, copy the `accessToken` 
 | `PATCH`  | `/users/:id` | Update a user               | Admin  |
 | `DELETE` | `/users/:id` | Delete a user without loans | Admin  |
 
-| Method   | Route               | Description                                       | Access |
-|----------|---------------------|---------------------------------------------------|--------|
-| `POST`   | `/loans`            | Lend an available copy to a user                  | Admin  |
-| `GET`    | `/loans`            | List loans, most recently lent first, paginated   | Admin  |
-| `GET`    | `/loans/:id`        | Get a loan                                        | Admin  |
-| `PATCH`  | `/loans/:id`        | Adjust the dates of an open loan — an extension   | Admin  |
-| `POST`   | `/loans/:id/return` | Close the loan and put the copy back on the shelf | Admin  |
-| `DELETE` | `/loans/:id`        | Delete a loan; an open one releases its book      | Admin  |
+| Method   | Route               | Description                                       | Access   |
+|----------|---------------------|---------------------------------------------------|----------|
+| `POST`   | `/loans`            | Lend an available copy to a user                  | Admin    |
+| `GET`    | `/loans`            | List loans, most recently lent first, paginated   | Admin    |
+| `GET`    | `/loans/me`         | List my open loans, paginated                     | Any user |
+| `GET`    | `/loans/:id`        | Get a loan                                        | Admin    |
+| `PATCH`  | `/loans/:id`        | Adjust the dates of an open loan — an extension   | Admin    |
+| `POST`   | `/loans/:id/return` | Close the loan and put the copy back on the shelf | Admin    |
+| `DELETE` | `/loans/:id`        | Delete a loan; an open one releases its book      | Admin    |
 
 Access is enforced by two guards registered globally, so an endpoint is protected the day it is written: `@Public()`
 opts out of authentication, `@Roles(UserRole.ADMIN)` restricts to admins, and no decorator means any valid token.
@@ -124,8 +125,8 @@ curl localhost:3000/auth/me -H "Authorization: Bearer $ACCESS_TOKEN"
 
 ### Pagination
 
-The three list endpoints — `GET /books`, `GET /users` and `GET /loans` — take `page` and `limit`, and answer with a
-`data` + `meta` envelope rather than a bare array.
+The list endpoints — `GET /books`, `GET /users`, `GET /loans` and `GET /loans/me` — take `page` and `limit`, and answer
+with a `data` + `meta` envelope rather than a bare array.
 
 | Parameter | Default | Range     |
 |-----------|---------|-----------|
