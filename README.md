@@ -90,17 +90,17 @@ protected route from Swagger UI, run `POST /auth/login`, copy the `accessToken` 
 | `PATCH`  | `/books/:id` | Update a book         | Admin    |
 | `DELETE` | `/books/:id` | Delete a book         | Admin    |
 
-| Method   | Route        | Description           | Access |
-|----------|--------------|-----------------------|--------|
-| `POST`   | `/users`     | Create a user         | Admin  |
-| `GET`    | `/users`     | List users, paginated | Admin  |
-| `GET`    | `/users/:id` | Get a user            | Admin  |
-| `PATCH`  | `/users/:id` | Update a user         | Admin  |
-| `DELETE` | `/users/:id` | Delete a user         | Admin  |
+| Method   | Route        | Description                 | Access |
+|----------|--------------|-----------------------------|--------|
+| `POST`   | `/users`     | Create a user               | Admin  |
+| `GET`    | `/users`     | List users, paginated       | Admin  |
+| `GET`    | `/users/:id` | Get a user                  | Admin  |
+| `PATCH`  | `/users/:id` | Update a user               | Admin  |
+| `DELETE` | `/users/:id` | Delete a user without loans | Admin  |
 
 | Method   | Route               | Description                                       | Access |
 |----------|---------------------|---------------------------------------------------|--------|
-| `POST`   | `/loans`            | Lend an available copy                            | Admin  |
+| `POST`   | `/loans`            | Lend an available copy to a user                  | Admin  |
 | `GET`    | `/loans`            | List loans, most recently lent first, paginated   | Admin  |
 | `GET`    | `/loans/:id`        | Get a loan                                        | Admin  |
 | `PATCH`  | `/loans/:id`        | Adjust the dates of an open loan — an extension   | Admin  |
@@ -160,6 +160,16 @@ both tables runs in a transaction. Lending a copy that is not `available` answer
 already returned loan. The loan `code` is generated server-side and `dueDate` is derived from `loanedAt` plus a term of
 14, 21 or 30 days.
 
+**Who borrows what.** A loan points at a book *and* at the user holding it, so `POST /loans` takes a `userId` alongside
+the `bookId`: an unknown one answers `404`, an inactive account `409`. Neither can be changed afterwards — `PATCH
+/loans/:id` only moves dates, and handing a copy to someone else is a return followed by a new loan. Both relations are
+eager, so every loan travels with its `book` and its `user` embedded; the password never comes along, because the column
+is `select: false`. The inverse sides (`Book.loans`, `User.loans`) are not eager and stay out of the responses.
+
+Deleting is the other half of that: the foreign keys are `ON DELETE NO ACTION`, so a book or a user with loans on record
+answers `409` rather than cascading the lending history away. An account that should stop borrowing is deactivated with
+`isActive: false`, not deleted.
+
 ## Migrations
 
 Migration files live in `src/database/migrations/` — the only path the data source looks at. `synchronize` is always
@@ -180,8 +190,12 @@ migrations on start, through `DB_MIGRATIONS_RUN=true`.
 
 Seeding uses [`typeorm-extension`](https://www.npmjs.com/package/typeorm-extension) with the standard *factory +
 seeder* pair, and rows are generated with [`@faker-js/faker`](https://fakerjs.dev) in Spanish — there is no static
-fixture file. `user.seeder.ts` has no factory on purpose: three fixed users (one `admin`, two `member`) give stable
-credentials after every reseed, all sharing the password `Bibliotech123`.
+fixture file. `user.seeder.ts` mixes both: three fixed users (one `admin`, two `member`) give stable credentials after
+every reseed, and `user.factory.ts` adds a handful of generated members on top, so the loan history has enough borrowers
+to be worth paging through. Every seeded account shares the password `Bibliotech123`, and a few generated ones come out
+`isActive: false` on purpose, so the rule that stops them borrowing has something to reject.
+
+The seeders run in order — books, then users, then loans — because a loan needs both of its parents to exist first.
 
 ```shell
 npm run seed
@@ -194,14 +208,16 @@ The `seeder` service sits behind the `tooling` profile, so `docker compose up` n
 run on demand and exits when the seeding finishes. It reuses the `bibliotech-backend` image, so build it first
 (`docker compose build`) or add `--build` to the `run`.
 
-Four environment variables tune a run:
+A handful of environment variables tune a run:
 
-| Variable             | Default         | Description                                            |
-|----------------------|-----------------|--------------------------------------------------------|
-| `SEED_BOOK_COUNT`    | `25`            | How many books to insert                               |
-| `SEED_FRESH`         | `false`         | Truncate `loan`, `book` and `user` before inserting    |
-| `SEED_USER_PASSWORD` | `Bibliotech123` | Password given to the three seeded users               |
-| `SEED_FAKER_SEED`    | —               | Fix faker's seed for a reproducible set of books        |
+| Variable                 | Default         | Description                                                 |
+|--------------------------|-----------------|-------------------------------------------------------------|
+| `SEED_BOOK_COUNT`        | `25`            | How many books to insert                                    |
+| `SEED_USER_COUNT`        | `10`            | Members generated on top of the three fixed users           |
+| `SEED_LOAN_MAX_PER_BOOK` | `3`             | Cap on the returned loans in each copy's history            |
+| `SEED_FRESH`             | `false`         | Truncate `loans`, `books` and `users` before inserting      |
+| `SEED_USER_PASSWORD`     | `Bibliotech123` | Password given to every seeded user                         |
+| `SEED_FAKER_SEED`        | —               | Fix faker's seed for a reproducible set of rows             |
 
 ```shell
 SEED_FRESH=true SEED_BOOK_COUNT=100 npm run seed

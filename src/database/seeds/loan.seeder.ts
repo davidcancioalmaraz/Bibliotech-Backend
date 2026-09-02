@@ -4,6 +4,7 @@ import type { Seeder, SeederFactoryManager } from 'typeorm-extension'
 import { Book, BookStatus } from '../../book/entities/index.js'
 import { Loan } from '../../loan/entities/index.js'
 import { today } from '../../loan/utils/dates.js'
+import { User, UserRole } from '../../user/entities/index.js'
 import { faker } from './faker.js'
 import { dateAsOpen, dateAsReturned } from './loan.factory.js'
 
@@ -18,6 +19,17 @@ export class LoanSeeder implements Seeder {
 
     if (books.length === 0) {
       console.log('No books to lend, skipping loans')
+      return
+    }
+
+    // Every loan needs a borrower — `loans.user_id` is NOT NULL — so without
+    // members there is nothing to seed. Hence `UserSeeder` runs first.
+    const members = await dataSource
+      .getRepository(User)
+      .findBy({ role: UserRole.MEMBER, isActive: true })
+
+    if (members.length === 0) {
+      console.log('No active members to lend to, skipping loans')
       return
     }
 
@@ -36,6 +48,7 @@ export class LoanSeeder implements Seeder {
       if (book.status === BookStatus.ON_LOAN) {
         const open = dateAsOpen(await factory.make())
         open.bookId = book.id
+        open.userId = faker.helpers.arrayElement(members).id
         loans.push(open)
         cutoff = open.loanedAt
       }
@@ -45,6 +58,7 @@ export class LoanSeeder implements Seeder {
       for (let i = 0; i < history; i++) {
         const loan = dateAsReturned(await factory.make(), cutoff)
         loan.bookId = book.id
+        loan.userId = faker.helpers.arrayElement(members).id
         loans.push(loan)
         cutoff = loan.loanedAt
       }
