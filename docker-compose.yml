@@ -1,0 +1,72 @@
+services:
+  database:
+    container_name: database
+    image: postgres:${POSTGRES_VERSION:-18.6-alpine}
+    restart: always
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_DB: ${DB_DATABASE:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-bibliotech-password}
+      TZ: ${TZ:-America/La_Paz}
+    volumes:
+      - database_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_DATABASE:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  bibliotech-backend:
+    container_name: bibliotech-backend
+    build:
+      context: .
+      no_cache: true
+    image: bibliotech-backend
+    restart: always
+    ports:
+      - '${PORT:-3000}:3000'
+    environment:
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-bibliotech-password}
+      DB_DATABASE: ${DB_DATABASE:-postgres}
+      DB_MIGRATIONS_RUN: "true"
+      JWT_SECRET: ${JWT_SECRET:?Missing JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
+    depends_on:
+      database:
+        condition: service_healthy
+
+  seeder:
+    profiles: ["tooling"]
+    build:
+      context: .
+    image: bibliotech-backend
+    restart: "no"
+    command: ["node", "database/seed.js"]
+    environment:
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-bibliotech-password}
+      DB_DATABASE: ${DB_DATABASE:-postgres}
+      DB_MIGRATIONS_RUN: "false"
+      DB_LOGGING: ${DB_LOGGING:-false}
+      # Left unset here so the seeder's own defaults apply; override per run
+      # with `-e` or in .env
+      SEED_BOOK_COUNT:
+      SEED_USER_COUNT:
+      SEED_FRESH:
+      SEED_FAKER_SEED:
+      SEED_USER_PASSWORD:
+      SEED_LOAN_MAX_PER_BOOK:
+    depends_on:
+      database:
+        condition: service_healthy
+
+volumes:
+  database_data:
