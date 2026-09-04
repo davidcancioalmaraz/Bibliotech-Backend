@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { DataSource, type EntityManager, Repository } from 'typeorm'
+import { DataSource, type EntityManager, IsNull, Repository } from 'typeorm'
 
 import { Book, BookStatus } from '../book/entities/index.js'
 import { PaginationQueryDto, paginate } from '../common/index.js'
@@ -98,6 +98,13 @@ export class LoanService {
 
   findAll(query: PaginationQueryDto) {
     return paginate(this.loanRepository, query, {
+      order: { loanedAt: 'DESC', id: 'DESC' },
+    })
+  }
+
+  findMine(userId: number, query: PaginationQueryDto) {
+    return paginate(this.loanRepository, query, {
+      where: { userId, returnedAt: IsNull() },
       order: { loanedAt: 'DESC', id: 'DESC' },
     })
   }

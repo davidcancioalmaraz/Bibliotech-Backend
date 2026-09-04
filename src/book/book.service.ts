@@ -29,7 +29,7 @@ export class BookService {
 
     if (createBookDto.status === BookStatus.ON_LOAN)
       throw new BadRequestException(
-        'A new book cannot start as on-loan; lend it through POST /loans',
+        'A new book cannot start as on-loan; lend it through POST /api/v1/loans',
       )
 
     return this.bookRepository.save(this.bookRepository.create(createBookDto))
@@ -102,7 +102,7 @@ export class BookService {
 
     if (status === BookStatus.ON_LOAN)
       throw new ConflictException(
-        `Book ${book.id} only becomes on-loan by lending it through POST /loans`,
+        `Book ${book.id} only becomes on-loan by lending it through POST /api/v1/loans`,
       )
   }
 }
