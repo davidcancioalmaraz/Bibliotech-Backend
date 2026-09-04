@@ -1,1 +1,1 @@
-export * from './book.entity.js'
+export * from './book.entity.ts'

@@ -1,15 +1,18 @@
 import { DataSource } from 'typeorm'
 import { runSeeders } from 'typeorm-extension'
 
-import { Book } from '../book/entities/book.entity.js'
+import { Book } from '../book/entities/index.ts'
+import { Loan } from '../loan/entities/index.ts'
 import { dataSourceOptions } from './data-source.js'
 import { bookFactory } from './seeds/book.factory.js'
 import { faker } from './seeds/faker.js'
+import { loanFactory } from './seeds/loan.factory.js'
 import { BookSeeder } from './seeds/book.seeder.js'
+import { LoanSeeder } from './seeds/loan.seeder.js'
 
 const dataSource = new DataSource({
   ...dataSourceOptions,
-  entities: [Book],
+  entities: [Book, Loan],
   migrationsRun: false,
 })
 
@@ -21,16 +24,18 @@ try {
   }
 
   if (process.env.SEED_FRESH === 'true') {
-    const { tableName } = dataSource.getRepository(Book).metadata
-    await dataSource.query(
-      `TRUNCATE TABLE "${tableName}" RESTART IDENTITY CASCADE`,
+    const tables = [Loan, Book].map(
+      (entity) => dataSource.getRepository(entity).metadata.tableName,
     )
-    console.log(`Table "${tableName}" truncated`)
+    await dataSource.query(
+      `TRUNCATE TABLE ${tables.map((table) => `"${table}"`).join(', ')} RESTART IDENTITY CASCADE`,
+    )
+    console.log(`Tables ${tables.join(', ')} truncated`)
   }
 
   await runSeeders(dataSource, {
-    seeds: [BookSeeder],
-    factories: [bookFactory],
+    seeds: [BookSeeder, LoanSeeder],
+    factories: [bookFactory, loanFactory],
   })
 } finally {
   await dataSource.destroy()

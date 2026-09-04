@@ -4,7 +4,9 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
   CreateDateColumn,
+  OneToMany,
 } from 'typeorm'
+import { Loan } from '../../loan/entities/index.ts'
 
 export enum BookStatus {
   AVAILABLE = 'available',
@@ -54,9 +56,12 @@ export class Book {
   })
   status: BookStatus
 
-  @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
+  @OneToMany(() => Loan, (loan) => loan.book)
+  loans: Loan[]
+
+  @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
   createdAt: Date
 
-  @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
+  @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
   updatedAt: Date
 }
