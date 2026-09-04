@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 
 import { PaginationQueryDto, paginate } from '../common/index.js'
+import { Loan } from '../loan/entities/index.js'
 import { CreateUserDto } from './dto/create-user.dto.js'
 import { UpdateUserDto } from './dto/update-user.dto.js'
 import { hashPassword } from './utils/password.js'
@@ -17,6 +18,10 @@ export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    // Read-only here, and only to count: an account cannot be dropped while the
+    // lending history still points at it.
+    @InjectRepository(Loan)
+    private readonly loanRepository: Repository<Loan>,
   ) {}
 
   async create(createUserDto: CreateUserDto) {
@@ -81,6 +86,16 @@ export class UserService {
   }
 
   async remove(id: number) {
+    // The foreign key is `ON DELETE NO ACTION`, so any loan — open or returned
+    // — blocks the delete. Cascading instead would erase the lending history to
+    // make the request succeed, and an account is not worth that trade; an
+    // account that should stop borrowing is deactivated, not deleted.
+    const loans = await this.loanRepository.countBy({ userId: id })
+    if (loans > 0)
+      throw new ConflictException(
+        `User ${id} has ${loans} loan(s) recorded against them and cannot be deleted`,
+      )
+
     const result = await this.userRepository.delete(id)
     if (result.affected === 0)
       throw new NotFoundException(`User ${id} not found`)

@@ -8,6 +8,7 @@ import { dataSourceOptions } from './data-source.js'
 import { bookFactory } from './seeds/book.factory.js'
 import { faker } from './seeds/faker.js'
 import { loanFactory } from './seeds/loan.factory.js'
+import { userFactory } from './seeds/user.factory.js'
 import { BookSeeder } from './seeds/book.seeder.js'
 import { LoanSeeder } from './seeds/loan.seeder.js'
 import { UserSeeder } from './seeds/user.seeder.js'
@@ -35,9 +36,11 @@ try {
     console.log(`Tables ${tables.join(', ')} truncated`)
   }
 
+  // Order matters: a loan points at both a book and a borrower, so its two
+  // parents have to exist before `LoanSeeder` runs.
   await runSeeders(dataSource, {
-    seeds: [BookSeeder, LoanSeeder, UserSeeder],
-    factories: [bookFactory, loanFactory],
+    seeds: [BookSeeder, UserSeeder, LoanSeeder],
+    factories: [bookFactory, loanFactory, userFactory],
   })
 } finally {
   await dataSource.destroy()

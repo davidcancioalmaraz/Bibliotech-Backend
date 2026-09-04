@@ -4,7 +4,9 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
   CreateDateColumn,
+  OneToMany,
 } from 'typeorm'
+import { Loan } from '../../loan/entities/index.ts'
 
 export enum UserRole {
   ADMIN = 'admin',
@@ -34,6 +36,9 @@ export class User {
 
   @Column({ name: 'is_active', default: true })
   isActive: boolean
+
+  @OneToMany(() => Loan, (loan) => loan.user)
+  loans: Loan[]
 
   @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
   createdAt: Date

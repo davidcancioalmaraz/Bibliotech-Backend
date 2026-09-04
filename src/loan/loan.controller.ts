@@ -43,16 +43,18 @@ export class LoanController {
   constructor(private readonly loanService: LoanService) {}
 
   /**
-   * Lends an available copy: generates the loan code, derives the due date
-   * from the term and moves the book to `on-loan`.
+   * Lends an available copy to a user: generates the loan code, derives the due
+   * date from the term and moves the book to `on-loan`.
    */
   @Post()
   @ApiCreatedResponse({ type: LoanResponseDto })
-  @ApiNotFoundResponse({ description: 'The book does not exist' })
+  @ApiNotFoundResponse({ description: 'The book or the user does not exist' })
   @ApiBadRequestResponse({
     description: '`loanedAt` is not a past `YYYY-MM-DD` date',
   })
-  @ApiConflictResponse({ description: 'The book is not available for loan' })
+  @ApiConflictResponse({
+    description: 'The book is not available for loan, or the user is inactive',
+  })
   create(@Body() createLoanDto: CreateLoanDto) {
     return this.loanService.create(createLoanDto)
   }

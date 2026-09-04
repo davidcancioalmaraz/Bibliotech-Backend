@@ -1,6 +1,7 @@
 import { ApiProperty, OmitType } from '@nestjs/swagger'
 
 import { BookResponseDto } from '../../book/dto/book-response.dto.js'
+import { UserResponseDto } from '../../user/dto/user-response.dto.js'
 import { Loan } from '../entities/index.js'
 
 /**
@@ -12,6 +13,7 @@ import { Loan } from '../entities/index.js'
  */
 export class LoanResponseDto extends OmitType(Loan, [
   'book',
+  'user',
   'loanedAt',
   'dueDate',
   'returnedAt',
@@ -29,4 +31,12 @@ export class LoanResponseDto extends OmitType(Loan, [
   /** The lent copy; it travels with the loan, since the relation is eager. */
   @ApiProperty({ type: BookResponseDto })
   book: BookResponseDto
+
+  /**
+   * Who holds the copy; eager as well, so every loan names its borrower. The
+   * password never comes along: the column is `select: false`, which TypeORM
+   * honours per alias, the joined one included.
+   */
+  @ApiProperty({ type: UserResponseDto })
+  user: UserResponseDto
 }
