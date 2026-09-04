@@ -9,9 +9,12 @@ import {
   HttpCode,
   HttpStatus,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common'
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNoContentResponse,
@@ -22,6 +25,7 @@ import {
 } from '@nestjs/swagger'
 
 import { Roles } from '../auth/decorators/roles.decorator.js'
+import { ApiPaginatedResponse, PaginationQueryDto } from '../common/index.js'
 import { UserRole } from './entities/index.js'
 import { UserService } from './user.service.js'
 import { CreateUserDto } from './dto/create-user.dto.js'
@@ -33,6 +37,7 @@ import { UserResponseDto } from './dto/user-response.dto.js'
 @Roles(UserRole.ADMIN)
 @ApiUnauthorizedResponse({ description: 'Missing, expired or invalid token' })
 @ApiForbiddenResponse({ description: 'Requires the admin role' })
+@ApiBadRequestResponse({ description: 'The payload failed validation' })
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -40,15 +45,16 @@ export class UserController {
   /** Registers a user. The password is hashed before it is stored. */
   @Post()
   @ApiCreatedResponse({ type: UserResponseDto })
+  @ApiConflictResponse({ description: 'The email is already registered' })
   create(@Body() createUserDto: CreateUserDto) {
     return this.userService.create(createUserDto)
   }
 
-  /** Lists every user. */
+  /** Lists the users, one page at a time. */
   @Get()
-  @ApiOkResponse({ type: [UserResponseDto] })
-  findAll() {
-    return this.userService.findAll()
+  @ApiPaginatedResponse(UserResponseDto)
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.userService.findAll(query)
   }
 
   /** Retrieves a single user. */
@@ -63,6 +69,7 @@ export class UserController {
   @Patch(':id')
   @ApiOkResponse({ type: UserResponseDto })
   @ApiNotFoundResponse({ description: 'The user does not exist' })
+  @ApiConflictResponse({ description: 'The email is already registered' })
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto,

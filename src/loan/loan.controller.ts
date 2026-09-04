@@ -9,8 +9,10 @@ import {
   HttpCode,
   HttpStatus,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common'
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
@@ -23,6 +25,7 @@ import {
 } from '@nestjs/swagger'
 
 import { Roles } from '../auth/decorators/roles.decorator.js'
+import { ApiPaginatedResponse, PaginationQueryDto } from '../common/index.js'
 import { UserRole } from '../user/entities/index.js'
 import { LoanService } from './loan.service.js'
 import { CreateLoanDto } from './dto/create-loan.dto.js'
@@ -34,6 +37,7 @@ import { LoanResponseDto } from './dto/loan-response.dto.js'
 @Roles(UserRole.ADMIN)
 @ApiUnauthorizedResponse({ description: 'Missing, expired or invalid token' })
 @ApiForbiddenResponse({ description: 'Requires the admin role' })
+@ApiBadRequestResponse({ description: 'The payload failed validation' })
 @Controller('loans')
 export class LoanController {
   constructor(private readonly loanService: LoanService) {}
@@ -45,16 +49,19 @@ export class LoanController {
   @Post()
   @ApiCreatedResponse({ type: LoanResponseDto })
   @ApiNotFoundResponse({ description: 'The book does not exist' })
+  @ApiBadRequestResponse({
+    description: '`loanedAt` is not a past `YYYY-MM-DD` date',
+  })
   @ApiConflictResponse({ description: 'The book is not available for loan' })
   create(@Body() createLoanDto: CreateLoanDto) {
     return this.loanService.create(createLoanDto)
   }
 
-  /** Lists every loan, most recently lent first. */
+  /** Lists the loans, most recently lent first, one page at a time. */
   @Get()
-  @ApiOkResponse({ type: [LoanResponseDto] })
-  findAll() {
-    return this.loanService.findAll()
+  @ApiPaginatedResponse(LoanResponseDto)
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.loanService.findAll(query)
   }
 
   /** Retrieves a single loan. */
@@ -69,6 +76,9 @@ export class LoanController {
   @Patch(':id')
   @ApiOkResponse({ type: LoanResponseDto })
   @ApiNotFoundResponse({ description: 'The loan does not exist' })
+  @ApiBadRequestResponse({
+    description: '`loanedAt` is not a past `YYYY-MM-DD` date',
+  })
   @ApiConflictResponse({ description: 'The loan is already returned' })
   update(
     @Param('id', ParseIntPipe) id: number,

@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer'
 import {
   IsBoolean,
   IsEmail,
@@ -17,6 +18,11 @@ export class CreateUserDto {
   name: string
 
   /** @example 'admin@bibliotech.test' */
+  // The unique index on `users.email` is case-sensitive, so without this
+  // `Admin@…` and `admin@…` would both be insertable as separate accounts.
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : value,
+  )
   @IsEmail()
   email: string
 

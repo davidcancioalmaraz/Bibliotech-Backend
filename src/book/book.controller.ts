@@ -9,9 +9,12 @@ import {
   HttpCode,
   HttpStatus,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common'
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNoContentResponse,
@@ -22,6 +25,7 @@ import {
 } from '@nestjs/swagger'
 
 import { Roles } from '../auth/decorators/roles.decorator.js'
+import { ApiPaginatedResponse, PaginationQueryDto } from '../common/index.js'
 import { UserRole } from '../user/entities/index.js'
 import { BookService } from './book.service.js'
 import { CreateBookDto } from './dto/create-book.dto.js'
@@ -31,6 +35,7 @@ import { BookResponseDto } from './dto/book-response.dto.js'
 @ApiTags('books')
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ description: 'Missing, expired or invalid token' })
+@ApiBadRequestResponse({ description: 'The payload failed validation' })
 @Controller('books')
 export class BookController {
   constructor(private readonly bookService: BookService) {}
@@ -40,15 +45,16 @@ export class BookController {
   @Roles(UserRole.ADMIN)
   @ApiCreatedResponse({ type: BookResponseDto })
   @ApiForbiddenResponse({ description: 'Requires the admin role' })
+  @ApiConflictResponse({ description: 'The code is already taken' })
   create(@Body() createBookDto: CreateBookDto) {
     return this.bookService.create(createBookDto)
   }
 
-  /** Lists the whole catalogue. */
+  /** Lists the catalogue, one page at a time. */
   @Get()
-  @ApiOkResponse({ type: [BookResponseDto] })
-  findAll() {
-    return this.bookService.findAll()
+  @ApiPaginatedResponse(BookResponseDto)
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.bookService.findAll(query)
   }
 
   /** Retrieves a single book. */
@@ -65,6 +71,10 @@ export class BookController {
   @ApiOkResponse({ type: BookResponseDto })
   @ApiForbiddenResponse({ description: 'Requires the admin role' })
   @ApiNotFoundResponse({ description: 'The book does not exist' })
+  @ApiConflictResponse({
+    description:
+      'The code is already taken, or the status conflicts with an open loan',
+  })
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateBookDto: UpdateBookDto,
@@ -79,6 +89,9 @@ export class BookController {
   @ApiNoContentResponse({ description: 'The book was deleted' })
   @ApiForbiddenResponse({ description: 'Requires the admin role' })
   @ApiNotFoundResponse({ description: 'The book does not exist' })
+  @ApiConflictResponse({
+    description: 'The book has loans recorded against it',
+  })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.bookService.remove(id)
   }
