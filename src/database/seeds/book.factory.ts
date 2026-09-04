@@ -2,17 +2,17 @@ import { setSeederFactory } from 'typeorm-extension'
 
 import { Book, BookStatus } from '../../book/entities/book.entity.js'
 import { faker } from './faker.js'
-import { plantillasDescripcion } from './locale/es-libros.js'
+import { descriptionTemplates } from './locale/es-libros.js'
 
-const capitalizar = (texto: string) =>
-  texto.charAt(0).toUpperCase() + texto.slice(1)
+const capitalize = (text: string) =>
+  text.charAt(0).toUpperCase() + text.slice(1)
 
 export const bookFactory = setSeederFactory(Book, () => {
   const book = new Book()
 
-  book.title = capitalizar(faker.helpers.fake(faker.book.title()))
+  book.title = capitalize(faker.helpers.fake(faker.book.title()))
   book.description = faker.helpers.fake(
-    faker.helpers.arrayElement(plantillasDescripcion),
+    faker.helpers.arrayElement(descriptionTemplates),
   )
   book.isbn = faker.commerce.isbn()
   book.code = `BT-${faker.string.alphanumeric({ length: 8, casing: 'upper' })}`

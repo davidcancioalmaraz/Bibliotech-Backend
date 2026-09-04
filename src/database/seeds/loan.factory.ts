@@ -1,69 +1,54 @@
 import { setSeederFactory } from 'typeorm-extension'
 
 import { Loan } from '../../loan/entities/loan.entity.js'
+import { LOAN_TERM_DAYS, addDays, today } from '../../loan/utils/dates.js'
 import { faker } from './faker.js'
 
-/** Plazos de préstamo que ofrece la biblioteca, en días. */
-const PLAZOS_PRESTAMO_DIAS = [14, 21, 30]
-
-/** Descarta la hora: las columnas `date` sólo guardan año, mes y día. */
-const soloFecha = (fecha: Date) =>
-  new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate())
-
-export const sumarDias = (fecha: Date, dias: number) => {
-  const resultado = new Date(fecha)
-  resultado.setDate(resultado.getDate() + dias)
-  return resultado
-}
-
-export const hoy = () => soloFecha(new Date())
-
 /**
- * Fecha un préstamo ya cerrado, devuelto antes de `antesDe`. Encadenando
- * llamadas con `antesDe = loan.loanedAt` se obtiene un historial hacia atrás
- * sin solapes, que es como se comporta un ejemplar real: sólo puede estar en
- * manos de una persona a la vez.
+ * Dates a closed loan, returned before `before`. Chaining calls with
+ * `before = loan.loanedAt` builds a history backwards without overlaps, which
+ * is how a real copy behaves: it can only be in one person's hands at a time.
  */
-export const fecharDevuelto = (loan: Loan, antesDe: Date) => {
-  const plazo = faker.helpers.arrayElement(PLAZOS_PRESTAMO_DIAS)
-  // Días que el ejemplar pasa en la estantería antes del siguiente préstamo.
-  const returnedAt = sumarDias(antesDe, -faker.number.int({ min: 1, max: 30 }))
-  const loanedAt = sumarDias(
+export const dateAsReturned = (loan: Loan, before: Date) => {
+  const term = faker.helpers.arrayElement(LOAN_TERM_DAYS)
+  // Days the copy sits on the shelf before the next loan.
+  const returnedAt = addDays(before, -faker.number.int({ min: 1, max: 30 }))
+  const loanedAt = addDays(
     returnedAt,
-    -faker.number.int({ min: 1, max: plazo + 7 }),
+    -faker.number.int({ min: 1, max: term + 7 }),
   )
 
   loan.loanedAt = loanedAt
-  loan.dueDate = sumarDias(loanedAt, plazo)
+  loan.dueDate = addDays(loanedAt, term)
   loan.returnedAt = returnedAt
 
   return loan
 }
 
-/** Fecha un préstamo vivo; algunos salen vencidos a propósito. */
-export const fecharAbierto = (loan: Loan) => {
-  const plazo = faker.helpers.arrayElement(PLAZOS_PRESTAMO_DIAS)
-  const loanedAt = sumarDias(
-    hoy(),
-    -faker.number.int({ min: 0, max: plazo + 10 }),
+/** Dates an open loan; some come out overdue on purpose. */
+export const dateAsOpen = (loan: Loan) => {
+  const term = faker.helpers.arrayElement(LOAN_TERM_DAYS)
+  const loanedAt = addDays(
+    today(),
+    -faker.number.int({ min: 0, max: term + 10 }),
   )
 
   loan.loanedAt = loanedAt
-  loan.dueDate = sumarDias(loanedAt, plazo)
+  loan.dueDate = addDays(loanedAt, term)
   loan.returnedAt = null
 
   return loan
 }
 
 /**
- * Genera un préstamo ya devuelto, que es el caso mayoritario del histórico.
- * `LoanSeeder` reordena las fechas por ejemplar y reabre los que siguen vivos,
- * para que los préstamos concuerden con el `status` de cada libro.
+ * Generates an already returned loan, the majority case in the history.
+ * `LoanSeeder` reorders the dates per copy and reopens the ones still live, so
+ * the loans agree with each book's `status`.
  */
 export const loanFactory = setSeederFactory(Loan, () => {
   const loan = new Loan()
 
   loan.code = `LN-${faker.string.alphanumeric({ length: 8, casing: 'upper' })}`
 
-  return fecharDevuelto(loan, hoy())
+  return dateAsReturned(loan, today())
 })

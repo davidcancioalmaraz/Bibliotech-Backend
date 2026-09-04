@@ -4,7 +4,7 @@ import { Repository } from 'typeorm'
 
 import { CreateBookDto } from './dto/create-book.dto.js'
 import { UpdateBookDto } from './dto/update-book.dto.js'
-import { Book } from './entities/index.ts'
+import { Book } from './entities/index.js'
 
 @Injectable()
 export class BookService {
@@ -21,17 +21,22 @@ export class BookService {
     return this.bookRepository.find()
   }
 
-  findOne(id: number) {
-    return this.bookRepository.findOneBy({ id })
+  async findOne(id: number) {
+    const book = await this.bookRepository.findOneBy({ id })
+    if (!book) throw new NotFoundException(`Book ${id} not found`)
+
+    return book
   }
 
-  update(id: number, updateBookDto: UpdateBookDto) {
-    return this.bookRepository.update(id, updateBookDto)
+  async update(id: number, updateBookDto: UpdateBookDto) {
+    const book = await this.findOne(id)
+
+    return this.bookRepository.save(Object.assign(book, updateBookDto))
   }
 
   async remove(id: number) {
     const result = await this.bookRepository.delete(id)
     if (result.affected === 0)
-      throw new NotFoundException(`User ${id} not found`)
+      throw new NotFoundException(`Book ${id} not found`)
   }
 }
